@@ -183,7 +183,7 @@ public class SearchActivity extends Activity implements GoogleApiClient.Connecti
                         TransitionManager.beginDelayedTransition(container, auto);
                         progress.setVisibility(View.GONE);
                         results.setVisibility(View.VISIBLE);
-                        fab.setVisibility(View.VISIBLE);
+//                        fab.setVisibility(View.VISIBLE);
                         fab.setAlpha(0.6f);
                         fab.setScaleX(0f);
                         fab.setScaleY(0f);
@@ -529,7 +529,7 @@ public class SearchActivity extends Activity implements GoogleApiClient.Connecti
                 public void onAnimationEnd(Animator animation) {
                     confirmSaveContainer.setVisibility(View.GONE);
                     resultsScrim.setVisibility(View.GONE);
-                    fab.setVisibility(results.getVisibility());
+//                    fab.setVisibility(results.getVisibility());
                 }
             });
             hideConfirmation.start();
