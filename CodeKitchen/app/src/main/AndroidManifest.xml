@@ -10,8 +10,13 @@
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@style/AppTheme" >
+
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="AIzaSyCDsjkAEN-8sMeguk7rrL3Ut4ZN_h8KbZg"/>
+
         <activity
-            android:name=".ScrollingActivity"
+            android:name=".TestActivity"
             android:label="@string/app_name"
             android:theme="@style/AppTheme.NoActionBar" >
             <intent-filter>
