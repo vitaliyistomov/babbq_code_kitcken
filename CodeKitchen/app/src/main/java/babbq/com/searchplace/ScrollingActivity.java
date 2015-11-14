@@ -11,6 +11,7 @@ import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
+import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Toast;
@@ -33,12 +34,9 @@ import com.google.android.gms.location.places.ui.PlacePicker;
 import java.util.ArrayList;
 import java.util.Iterator;
 
-public class ScrollingActivity extends AppCompatActivity implements GoogleApiClient.ConnectionCallbacks,
-        GoogleApiClient.OnConnectionFailedListener, LocationListener {
+public class ScrollingActivity extends AppCompatActivity {
 
     private final static String TAG = ScrollingActivity.class.getSimpleName();
-    private GoogleApiClient mGoogleApiClient;
-    private LocationRequest mLocationRequest;
 
     private static final int REQUEST_PLACE_PICKER = 100;
     private static final int RC_SEARCH = 0;
@@ -55,12 +53,13 @@ public class ScrollingActivity extends AppCompatActivity implements GoogleApiCli
         fab.setOnClickListener(view -> Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
                 .setAction("Action", null).show());
 
-        mGoogleApiClient = new GoogleApiClient.Builder(this)
-                .addApi(LocationServices.API)
-                .addApi(Places.GEO_DATA_API)
-                .addConnectionCallbacks(this)
-                .addOnConnectionFailedListener(this)
-                .build();
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        // Inflate the menu; this adds items to the action bar if it is present.
+        getMenuInflater().inflate(R.menu.menu_scrolling, menu);
+        return true;
     }
 
     @Override
@@ -85,120 +84,8 @@ public class ScrollingActivity extends AppCompatActivity implements GoogleApiCli
         return super.onOptionsItemSelected(item);
     }
 
-    @Override
-    protected void onStart() {
-        super.onStart();
-        mGoogleApiClient.connect();
 
-    }
 
-    @Override
-    protected void onStop() {
-        mGoogleApiClient.disconnect();
-        super.onStop();
-    }
-
-    @Override
-    public void onConnected(Bundle bundle) {
-        Log.d(TAG, "onConnected");
-        mLocationRequest = new LocationRequest().create();
-        mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-        mLocationRequest.setInterval(3000); // Update location every second
-        LocationServices.FusedLocationApi.requestLocationUpdates(
-                mGoogleApiClient, mLocationRequest, this);
-
-        /*try {
-            PlacePicker.IntentBuilder intentBuilder =
-                    new PlacePicker.IntentBuilder();
-            Intent intent = intentBuilder.build(this);
-            // Start the intent by requesting a result,
-            // identified by a request code.
-            startActivityForResult(intent, REQUEST_PLACE_PICKER);
-
-        } catch (GooglePlayServicesRepairableException e) {
-            // ...
-        } catch (GooglePlayServicesNotAvailableException e) {
-            // ...
-        }*/
-
-        /*PendingResult result =
-                Places.GeoDataApi.getAutocompletePredictions(mGoogleApiClient, query,
-                        mBounds, mAutocompleteFilter);*/
-        PendingResult result =
-                Places.GeoDataApi.getAutocompletePredictions(mGoogleApiClient, "starbucks", null, null);
-        result.setResultCallback(mUpdatePlaceDetailsCallback);
-
-    }
-
-    /**
-     * Callback for results from a Places Geo Data API query that shows the first place result in
-     * the details view on screen.
-     */
-    private ResultCallback<AutocompletePredictionBuffer> mUpdatePlaceDetailsCallback
-            = new ResultCallback<AutocompletePredictionBuffer>() {
-
-        @Override
-        public void onResult(AutocompletePredictionBuffer autocompletePredictions) {
-            final Status status = autocompletePredictions.getStatus();
-            if (!status.isSuccess()) {
-                Toast.makeText(getApplicationContext(), "Error: " + status.toString(),
-                        Toast.LENGTH_SHORT).show();
-                Log.e(TAG, "Error getting place predictions: " + status
-                        .toString());
-                autocompletePredictions.release();
-                return;
-            }
-
-            Log.i(TAG, "Query completed. Received " + autocompletePredictions.getCount()
-                    + " predictions.");
-            String value = "";
-            Iterator<AutocompletePrediction> iterator = autocompletePredictions.iterator();
-            ArrayList resultList = new ArrayList<>(autocompletePredictions.getCount());
-            while (iterator.hasNext()) {
-                AutocompletePrediction prediction = iterator.next();
-                resultList.add(new PlaceAutocomplete(prediction.getPlaceId(),
-                        prediction.getDescription()));
-                if (value.equals("")) {
-                    value = prediction.getDescription();
-                    PendingResult result =
-                            Places.GeoDataApi.getPlaceById(mGoogleApiClient, prediction.getPlaceId());
-                    result.setResultCallback(mCoordinatePlaceDetailsCallback);
-
-                }
-                Log.d(TAG, "Place - Name:" + prediction.getDescription());
-
-            }
-            Log.d(TAG, "Result list size:" + resultList.size());
-            if (resultList.size() > 0) {
-                //Uri gmmIntentUri = Uri.parse("geo:0,0?q=1600 Amphitheatre Parkway, Mountain+View, California");
-
-            }
-            // Buffer release
-            autocompletePredictions.release();
-        }
-    };
-
-    private ResultCallback<PlaceBuffer> mCoordinatePlaceDetailsCallback
-            = new ResultCallback<PlaceBuffer>() {
-
-        @Override
-        public void onResult(PlaceBuffer places) {
-            if (!places.getStatus().isSuccess()) {
-                // Request did not complete successfully
-                Log.e(TAG, "Place query did not complete. Error: " + places.getStatus().toString());
-                places.release();
-                return;
-            }
-            // Get the Place object from the buffer.
-            final Place place = places.get(0);
-            //Uri gmmIntentUri = Uri.parse("geo:"+place.getLatLng().latitude+","+place.getLatLng().longitude);
-            Uri gmmIntentUri = Uri.parse("google.navigation:q=" + place.getLatLng().latitude + "," + place.getLatLng().longitude);
-            Intent mapIntent = new Intent(Intent.ACTION_VIEW, gmmIntentUri);
-            mapIntent.setPackage("com.google.android.apps.maps");
-            startActivity(mapIntent);
-            Log.d(TAG, "PlaceBuffer.onResult" + place.getLatLng().toString());
-        }
-    };
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
@@ -233,21 +120,6 @@ public class ScrollingActivity extends AppCompatActivity implements GoogleApiCli
             default:
                 super.onActivityResult(requestCode, resultCode, data);
         }
-    }
-
-    @Override
-    public void onConnectionSuspended(int i) {
-        Log.d(TAG, "onConnectionSuspended");
-    }
-
-    @Override
-    public void onConnectionFailed(ConnectionResult connectionResult) {
-        Log.d(TAG, "onConnectionFailed");
-    }
-
-    @Override
-    public void onLocationChanged(Location location) {
-        Log.d(TAG, "onLocationChanged (" + location.getLatitude() + ";" + location.getLongitude() + ")");
     }
 
     class PlaceAutocomplete {

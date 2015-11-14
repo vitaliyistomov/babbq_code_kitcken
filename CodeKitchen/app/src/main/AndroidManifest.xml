@@ -16,7 +16,7 @@
             android:value="AIzaSyCDsjkAEN-8sMeguk7rrL3Ut4ZN_h8KbZg"/>
 
         <activity
-            android:name=".TestActivity"
+            android:name=".ScrollingActivity"
             android:label="@string/app_name"
             android:screenOrientation="portrait"
             android:theme="@style/AppTheme.NoActionBar" >

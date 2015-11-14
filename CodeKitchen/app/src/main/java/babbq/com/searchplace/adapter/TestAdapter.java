@@ -25,7 +25,7 @@ import babbq.com.searchplace.model.PlaceAutocomplete;
  */
 public class TestAdapter extends RecyclerView.Adapter<TestAdapter.ViewHolder> {
 
-    private List<PlaceAutocomplete> mList;
+    private List<? extends PlaceAutocomplete> mList;
     private View.OnClickListener mListener;
     private GoogleApiClient mApiClient;
 
@@ -35,9 +35,17 @@ public class TestAdapter extends RecyclerView.Adapter<TestAdapter.ViewHolder> {
         mApiClient = client;
     }
 
-    public void setList(List<PlaceAutocomplete> list) {
+    public void setList(List<? extends PlaceAutocomplete> list) {
         mList = list;
         notifyDataSetChanged();
+    }
+
+    public PlaceAutocomplete getElementAt(final int index) {
+        if (mList != null && mList.size() > index) {
+            return mList.get(index);
+        } else {
+            return null;
+        }
     }
 
     @Override

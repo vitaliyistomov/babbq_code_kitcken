@@ -16,27 +16,48 @@
 
 package babbq.com.searchplace.data;
 
-import android.content.Context;
+import android.util.Log;
+import android.widget.Toast;
+
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.common.api.PendingResult;
+import com.google.android.gms.common.api.ResultCallback;
+import com.google.android.gms.common.api.Status;
+import com.google.android.gms.location.places.AutocompletePrediction;
+import com.google.android.gms.location.places.AutocompletePredictionBuffer;
+import com.google.android.gms.location.places.PlaceBuffer;
+import com.google.android.gms.location.places.Places;
+
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+
+import babbq.com.searchplace.model.PlaceAutocomplete;
 
 /**
  * Responsible for loading search results from dribbble and designer news. Instantiating classes are
  * responsible for providing the {code onDataLoaded} method to do something with the data.
  */
-public abstract class SearchDataManager extends BaseDataManager implements DataLoadingSubject {
+public abstract class SearchDataManager implements DataLoadingSubject {
+
+    private final static String TAG = SearchDataManager.class.getSimpleName();
+
+    private GoogleApiClient mGoogleApiClient;
+    private ResultCallback<PlaceBuffer> mCoordinatePlaceDetailsCallback;
+
+    public SearchDataManager(GoogleApiClient mGoogleApiClient, ResultCallback<PlaceBuffer> mCoordinatePlaceDetailsCallback) {
+        this.mGoogleApiClient = mGoogleApiClient;
+        this.mCoordinatePlaceDetailsCallback = mCoordinatePlaceDetailsCallback;
+    }
 
     // state
     private String query = "";
-    private boolean loadingDribbble = false;
-    private boolean loadingDesignerNews = false;
+    private boolean loadingSearchResults = false;
     private int page = 1;
-
-    public SearchDataManager(Context context) {
-        super(context);
-    }
 
     @Override
     public boolean isDataLoading() {
-        return loadingDribbble || loadingDesignerNews;
+        return loadingSearchResults;
     }
 
     public void searchFor(String query) {
@@ -46,65 +67,80 @@ public abstract class SearchDataManager extends BaseDataManager implements DataL
         } else {
             page++;
         }
-        searchDribbble(query, page);
-        searchDesignerNews(query, page);
+        searchLocations(query, page);
     }
 
     public void loadMore() {
         searchFor(query);
     }
 
+    public abstract void onDataLoaded(List<? extends PlaceAutocomplete> data);
+
     public void clear() {
         query = "";
         page = 1;
-        loadingDribbble = false;
-        loadingDesignerNews = false;
-
+        loadingSearchResults = false;
     }
 
     public String getQuery() {
         return query;
     }
 
-    private void searchDesignerNews(final String query, final int resultsPage) {
-//        loadingDesignerNews = true;
-//        getDesignerNewsApi().search(query, resultsPage, new Callback<StoriesResponse>() {
-//            @Override
-//            public void success(StoriesResponse storiesResponse, Response response) {
-//                if (storiesResponse != null) {
-//                    setPage(storiesResponse.stories, resultsPage);
-//                    setDataSource(storiesResponse.stories,
-//                            Source.DribbbleSearchSource.DRIBBBLE_QUERY_PREFIX + query);
-//                    onDataLoaded(storiesResponse.stories);
-//                }
-//                loadingDesignerNews = false;
-//            }
-//
-//            @Override
-//            public void failure(RetrofitError error) {
-//                loadingDesignerNews = false;
-//            }
-//        });
+    private void searchLocations(final String query, final int resultsPage) {
+        loadingSearchResults = true;
+
+        PendingResult result =
+                Places.GeoDataApi.getAutocompletePredictions(mGoogleApiClient, query, null, null);
+        result.setResultCallback(mUpdatePlaceDetailsCallback);
     }
 
-    private void searchDribbble(final String query, final int page) {
-//        loadingDribbble = true;
-//        new AsyncTask<Void, Void, List<Shot>>() {
-//            @Override
-//            protected List<Shot> doInBackground(Void... params) {
-//                return DribbbleSearch.search(query, DribbbleSearch.SORT_POPULAR, page);
-//            }
-//
-//            @Override
-//            protected void onPostExecute(List<Shot> shots) {
-//                if (shots != null && shots.size() > 0) {
-//                    setPage(shots, page);
-//                    setDataSource(shots, "Dribbble Search");
-//                    onDataLoaded(shots);
-//                }
-//                loadingDribbble = false;
-//            }
-//        }.execute();
-    }
+    /**
+     * Callback for results from a Places Geo Data API query that shows the first place result in
+     * the details view on screen.
+     */
+    private ResultCallback<AutocompletePredictionBuffer> mUpdatePlaceDetailsCallback
+            = new ResultCallback<AutocompletePredictionBuffer>() {
 
+        @Override
+        public void onResult(AutocompletePredictionBuffer autocompletePredictions) {
+            final Status status = autocompletePredictions.getStatus();
+            if (!status.isSuccess()) {
+                Toast.makeText(mGoogleApiClient.getContext(), "Error: " + status.toString(),
+                        Toast.LENGTH_SHORT).show();
+                Log.e(TAG, "Error getting place predictions: " + status
+                        .toString());
+                autocompletePredictions.release();
+                return;
+            }
+
+            Log.i(TAG, "Query completed. Received " + autocompletePredictions.getCount()
+                    + " predictions.");
+            String value = "";
+            Iterator<AutocompletePrediction> iterator = autocompletePredictions.iterator();
+            List<PlaceAutocomplete> resultList = new ArrayList<>(autocompletePredictions.getCount());
+            while (iterator.hasNext()) {
+                AutocompletePrediction prediction = iterator.next();
+                resultList.add(new PlaceAutocomplete(prediction.getPlaceId(),
+                        prediction.getDescription(), null));
+//                if (value.equals("")) {
+//                    value = prediction.getDescription();
+//                    PendingResult result =
+//                            Places.GeoDataApi.getPlaceById(mGoogleApiClient, prediction.getPlaceId());
+//                    result.setResultCallback(mCoordinatePlaceDetailsCallback);
+//
+//                }
+                Log.d(TAG, "Place - Name:" + prediction.getDescription());
+
+            }
+            Log.d(TAG, "Result list size:" + resultList.size());
+            if (resultList.size() > 0) {
+                //Uri gmmIntentUri = Uri.parse("geo:0,0?q=1600 Amphitheatre Parkway, Mountain+View, California");
+
+            }
+
+            onDataLoaded(resultList);
+            // Buffer release
+            autocompletePredictions.release();
+        }
+    };
 }
