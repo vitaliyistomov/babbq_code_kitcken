@@ -41,7 +41,7 @@
     <dimen name="drawer_width">@dimen/match_parent</dimen>
 
     <!-- grid -->
-    <integer name="num_columns">2</integer>
+    <integer name="num_columns">1</integer>
     <dimen name="grid_icon_with_padding">40dp</dimen> <!-- 24dp icon + 2 * @dimen/spacing_normal -->
 
     <!-- designer news story -->

@@ -27,6 +27,8 @@ import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.AnimatedVectorDrawable;
+import android.location.Location;
+import android.net.Uri;
 import android.os.Bundle;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.widget.GridLayoutManager;
@@ -39,6 +41,7 @@ import android.text.style.StyleSpan;
 import android.transition.Transition;
 import android.transition.TransitionInflater;
 import android.transition.TransitionManager;
+import android.util.Log;
 import android.util.TypedValue;
 import android.view.View;
 import android.view.ViewAnimationUtils;
@@ -50,11 +53,29 @@ import android.view.inputmethod.EditorInfo;
 import android.widget.ImageButton;
 import android.widget.ProgressBar;
 import android.widget.SearchView;
+import android.widget.Toast;
 
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.common.api.PendingResult;
+import com.google.android.gms.common.api.ResultCallback;
+import com.google.android.gms.common.api.Status;
+import com.google.android.gms.location.LocationListener;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.location.places.AutocompletePrediction;
+import com.google.android.gms.location.places.AutocompletePredictionBuffer;
+import com.google.android.gms.location.places.Place;
+import com.google.android.gms.location.places.PlaceBuffer;
+import com.google.android.gms.location.places.Places;
+
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
-import babbq.com.searchplace.data.CodeKitchenItem;
+import babbq.com.searchplace.adapter.TestAdapter;
 import babbq.com.searchplace.data.SearchDataManager;
+import babbq.com.searchplace.model.PlaceAutocomplete;
 import babbq.com.searchplace.ui.recyclerview.InfiniteScrollListener;
 import babbq.com.searchplace.ui.widget.BaselineGridTextView;
 import babbq.com.searchplace.util.ImeUtils;
@@ -65,7 +86,10 @@ import butterknife.BindInt;
 import butterknife.ButterKnife;
 import butterknife.OnClick;
 
-public class SearchActivity extends Activity {
+public class SearchActivity extends Activity implements GoogleApiClient.ConnectionCallbacks,
+        GoogleApiClient.OnConnectionFailedListener, LocationListener {
+
+    private final static String TAG = SearchActivity.class.getSimpleName();
 
     public static final String EXTRA_MENU_LEFT = "EXTRA_MENU_LEFT";
     public static final String EXTRA_MENU_CENTER_X = "EXTRA_MENU_CENTER_X";
@@ -109,10 +133,15 @@ public class SearchActivity extends Activity {
     float appBarElevation;
     private Transition auto;
 
+    private LocationRequest mLocationRequest;
+    private GoogleApiClient mGoogleApiClient;
     private int searchBackDistanceX;
     private int searchIconCenterX;
     private SearchDataManager dataManager;
-    private FeedAdapter adapter;
+//    private FeedAdapter adapter;
+
+    private TestAdapter mAdapter;
+
 
     public static Intent createStartIntent(Context context, int menuIconLeft, int menuIconCenterX) {
         Intent starter = new Intent(context, SearchActivity.class);
@@ -129,10 +158,26 @@ public class SearchActivity extends Activity {
         setupSearchView();
         auto = TransitionInflater.from(this).inflateTransition(R.transition.auto);
 
-        dataManager = new SearchDataManager(this) {
+        mGoogleApiClient = new GoogleApiClient.Builder(this)
+                .addApi(LocationServices.API)
+                .addApi(Places.GEO_DATA_API)
+                .addConnectionCallbacks(this)
+                .addOnConnectionFailedListener(this)
+                .build();
+
+        mAdapter = new TestAdapter(null, v -> {
+            int position = results.getChildLayoutPosition(v);
+            //Toast.makeText(getActivity(), "#" + position, Toast.LENGTH_SHORT).show();
+            PendingResult result =
+                    Places.GeoDataApi.getPlaceById(mGoogleApiClient, String.valueOf(mAdapter.getElementAt(position).placeId));
+            result.setResultCallback(mCoordinatePlaceDetailsCallback);
+        }, mGoogleApiClient);
+
+
+        dataManager = new SearchDataManager(mGoogleApiClient, mCoordinatePlaceDetailsCallback) {
 
             @Override
-            public void onDataLoaded(List<? extends CodeKitchenItem> data) {
+            public void onDataLoaded(List<? extends PlaceAutocomplete> data) {
                 if (data != null && data.size() > 0) {
                     if (results.getVisibility() != View.VISIBLE) {
                         TransitionManager.beginDelayedTransition(container, auto);
@@ -151,7 +196,8 @@ public class SearchActivity extends Activity {
                                 .setInterpolator(AnimationUtils.loadInterpolator(SearchActivity
                                         .this, android.R.interpolator.linear_out_slow_in));
                     }
-                    adapter.addAndResort(data);
+//                    mAdapter.addAndResort(data);
+                    mAdapter.setList(data);
                 } else {
                     TransitionManager.beginDelayedTransition(container, auto);
                     progress.setVisibility(View.GONE);
@@ -159,16 +205,16 @@ public class SearchActivity extends Activity {
                 }
             }
         };
-        adapter = new FeedAdapter(this, dataManager, columns);
-        results.setAdapter(adapter);
+//        mAdapter = new FeedAdapter(this, dataManager, columns);
+        results.setAdapter(mAdapter);
         GridLayoutManager layoutManager = new GridLayoutManager(this, columns);
-        layoutManager.setSpanSizeLookup(new GridLayoutManager.SpanSizeLookup() {
-
-            @Override
-            public int getSpanSize(int position) {
-                return adapter.getItemColumnSpan(position);
-            }
-        });
+//        layoutManager.setSpanSizeLookup(new GridLayoutManager.SpanSizeLookup() {
+//
+//            @Override
+//            public int getSpanSize(int position) {
+//                return mAdapter.getItemColumnSpan(position);
+//            }
+//        });
         results.setLayoutManager(layoutManager);
         results.addOnScrollListener(new InfiniteScrollListener(layoutManager, dataManager) {
 
@@ -280,6 +326,18 @@ public class SearchActivity extends Activity {
         } else {
             dismiss();
         }
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        mGoogleApiClient.connect();
+    }
+
+    @Override
+    protected void onStop() {
+        mGoogleApiClient.disconnect();
+        super.onStop();
     }
 
     @Override
@@ -514,7 +572,7 @@ public class SearchActivity extends Activity {
     }
 
     private void clearResults() {
-        adapter.clear();
+        mAdapter.setList(null);
         dataManager.clear();
         TransitionManager.beginDelayedTransition(container, auto);
         results.setVisibility(View.GONE);
@@ -585,4 +643,70 @@ public class SearchActivity extends Activity {
             }
         }
     };
+
+    @Override
+    public void onConnected(Bundle bundle) {
+        Log.d(TAG, "onConnected");
+        mLocationRequest = new LocationRequest().create();
+        mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+        mLocationRequest.setInterval(3000); // Update location every second
+        LocationServices.FusedLocationApi.requestLocationUpdates(
+                mGoogleApiClient, mLocationRequest, this);
+
+        /*try {
+            PlacePicker.IntentBuilder intentBuilder =
+                    new PlacePicker.IntentBuilder();
+            Intent intent = intentBuilder.build(this);
+            // Start the intent by requesting a result,
+            // identified by a request code.
+            startActivityForResult(intent, REQUEST_PLACE_PICKER);
+
+        } catch (GooglePlayServicesRepairableException e) {
+            // ...
+        } catch (GooglePlayServicesNotAvailableException e) {
+            // ...
+        }*/
+
+        /*PendingResult result =
+                Places.GeoDataApi.getAutocompletePredictions(mGoogleApiClient, query,
+                        mBounds, mAutocompleteFilter);*/
+    }
+
+    private ResultCallback<PlaceBuffer> mCoordinatePlaceDetailsCallback
+            = new ResultCallback<PlaceBuffer>() {
+
+        @Override
+        public void onResult(PlaceBuffer places) {
+            if (!places.getStatus().isSuccess()) {
+                // Request did not complete successfully
+                Log.e(TAG, "Place query did not complete. Error: " + places.getStatus().toString());
+                places.release();
+                return;
+            }
+            // Get the Place object from the buffer.
+            final Place place = places.get(0);
+            //Uri gmmIntentUri = Uri.parse("geo:"+place.getLatLng().latitude+","+place.getLatLng().longitude);
+            Uri gmmIntentUri = Uri.parse("google.navigation:q=" + place.getLatLng().latitude + "," + place.getLatLng().longitude);
+            Intent mapIntent = new Intent(Intent.ACTION_VIEW, gmmIntentUri);
+            mapIntent.setPackage("com.google.android.apps.maps");
+            startActivity(mapIntent);
+            Log.d(TAG, "PlaceBuffer.onResult" + place.getLatLng().toString());
+        }
+    };
+
+    @Override
+    public void onConnectionSuspended(int i) {
+        Log.d(TAG, "onConnectionSuspended");
+    }
+
+    @Override
+    public void onConnectionFailed(ConnectionResult connectionResult) {
+        Log.d(TAG, "onConnectionFailed");
+    }
+
+    @Override
+    public void onLocationChanged(Location location) {
+        Log.d(TAG, "onLocationChanged (" + location.getLatitude() + ";" + location.getLongitude() + ")");
+    }
+
 }
