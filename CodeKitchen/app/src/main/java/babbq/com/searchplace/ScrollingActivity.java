@@ -1,32 +1,31 @@
 package babbq.com.searchplace;
 
+import android.app.ActivityOptions;
+import android.content.Intent;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
-import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
 
 public class ScrollingActivity extends AppCompatActivity {
 
+    private static final int RC_SEARCH = 0;
+    private Toolbar toolbar;
+
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    protected void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_scrolling);
-        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+        toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
-        fab.setOnClickListener(new View.OnClickListener() {
-
-            @Override
-            public void onClick(View view) {
-                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
-            }
-        });
+        final FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
+        fab.setOnClickListener(view -> Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
+                .setAction("Action", null).show());
     }
 
     @Override
@@ -44,9 +43,30 @@ public class ScrollingActivity extends AppCompatActivity {
         int id = item.getItemId();
 
         //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
+        if (id == R.id.menu_search) {
+            // get the icon's location on screen to pass through to the search screen
+            final View searchMenuView = toolbar.findViewById(R.id.menu_search);
+            int[] loc = new int[2];
+            searchMenuView.getLocationOnScreen(loc);
+            startActivityForResult(SearchActivity.createStartIntent(this, loc[0], loc[0] +
+                    (searchMenuView.getWidth() / 2)), RC_SEARCH, ActivityOptions
+                    .makeSceneTransitionAnimation(this).toBundle());
+            searchMenuView.setAlpha(0f);
             return true;
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        switch (requestCode) {
+            case RC_SEARCH:
+                // reset the search icon which we hid
+                View searchMenuView = toolbar.findViewById(R.id.menu_search);
+                if (searchMenuView != null) {
+                    searchMenuView.setAlpha(1f);
+                }
+                break;
+        }
     }
 }

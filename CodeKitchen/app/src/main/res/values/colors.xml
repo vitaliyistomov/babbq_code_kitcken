@@ -3,4 +3,16 @@
     <color name="colorPrimary">#3F51B5</color>
     <color name="colorPrimaryDark">#303F9F</color>
     <color name="colorAccent">#FF4081</color>
+
+    <color name="text_primary_light">#ffffffff</color>
+    <color name="text_secondary_dark">#8a000000</color> <!-- 54% -->
+    <color name="text_secondary_light">#b3ffffff</color> <!-- 70% -->
+    <color name="background_dark">#ff333333</color>
+    <color name="ripple_light">#99ffffff</color>
+    <color name="ripple_dark">@color/mid_grey</color>
+    <color name="scrim">#99323232</color>
+    <color name="mid_grey">#40808080</color>
+    <color name="dark_icon">#99000000</color> <!-- 60% black-->
+    <color name="divider">#1f000000</color> <!-- 12% black -->
+
 </resources>
