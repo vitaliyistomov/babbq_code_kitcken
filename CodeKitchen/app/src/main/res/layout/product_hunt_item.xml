@@ -28,7 +28,7 @@
 
     <TextView
         android:id="@+id/hunt_title"
-        style="@style/Widget.Plaid.DesignerNewsTile"
+        style="@style/Widget.CodeKitchen.DesignerNewsTile"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginBottom="@dimen/spacing_micro"
@@ -38,7 +38,7 @@
 
     <TextView
         android:id="@+id/tagline"
-        style="@style/Widget.Plaid.TileSecondary"
+        style="@style/Widget.CodeKitchen.TileSecondary"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_marginBottom="@dimen/spacing_micro"
@@ -48,7 +48,7 @@
 
     <TextView
         android:id="@+id/story_comments"
-        style="@style/Widget.Plaid.TileSecondary"
+        style="@style/Widget.CodeKitchen.TileSecondary"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="end"
