@@ -1,8 +1,8 @@
 <resources>
-    <string name="app_name">Search Place</string>
+    <string name="app_name">Places</string>
     <string name="large_text">
-        "Using this application you can find a way to your favorite hipster-barista-coffee-dealer"
-        "or the best Whisky bar"
+        "Look for a way to your favorite hipster-barista-coffee-dealer"
+        "or the best Whisky bar around."
     </string>
     <string name="action_settings">Settings</string>
     <string name="search">Search</string>
