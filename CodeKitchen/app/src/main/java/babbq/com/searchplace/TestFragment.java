@@ -1,9 +1,12 @@
 package babbq.com.searchplace;
 
 import android.content.Intent;
+import android.graphics.Bitmap;
 import android.location.Location;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 import android.support.v7.widget.DefaultItemAnimator;
@@ -30,6 +33,9 @@ import com.google.android.gms.location.places.AutocompletePrediction;
 import com.google.android.gms.location.places.AutocompletePredictionBuffer;
 import com.google.android.gms.location.places.Place;
 import com.google.android.gms.location.places.PlaceBuffer;
+import com.google.android.gms.location.places.PlacePhotoMetadata;
+import com.google.android.gms.location.places.PlacePhotoMetadataBuffer;
+import com.google.android.gms.location.places.PlacePhotoMetadataResult;
 import com.google.android.gms.location.places.Places;
 
 import java.util.ArrayList;
@@ -52,6 +58,8 @@ public class TestFragment extends Fragment implements GoogleApiClient.Connection
 
     private RecyclerView mRecyclerView;
     private TestAdapter mAdapter;
+
+    private ArrayList<PlaceAutocomplete> resultList;
 
     private GoogleApiClient mGoogleApiClient;
 
@@ -94,9 +102,12 @@ public class TestFragment extends Fragment implements GoogleApiClient.Connection
             @Override
             public void onClick(View v) {
                 int position = mRecyclerView.getChildLayoutPosition(v);
-                Toast.makeText(getActivity(), "#" + position, Toast.LENGTH_SHORT).show();
+                //Toast.makeText(getActivity(), "#" + position, Toast.LENGTH_SHORT).show();
+                PendingResult result =
+                        Places.GeoDataApi.getPlaceById(mGoogleApiClient, String.valueOf(resultList.get(position).placeId));
+                result.setResultCallback(mCoordinatePlaceDetailsCallback);
             }
-        });
+        }, mGoogleApiClient);
         mRecyclerView = (RecyclerView) getActivity().findViewById(R.id.recyclerView);
         mRecyclerView.setHasFixedSize(true);
         mRecyclerView.setLayoutManager(new LinearLayoutManager(getActivity()));
@@ -119,6 +130,8 @@ public class TestFragment extends Fragment implements GoogleApiClient.Connection
             = new ResultCallback<AutocompletePredictionBuffer>() {
         @Override
         public void onResult(AutocompletePredictionBuffer autocompletePredictions) {
+
+
             final Status status = autocompletePredictions.getStatus();
             if (!status.isSuccess()) {
                 Toast.makeText(getContext(), "Error: " + status.toString(),
@@ -132,12 +145,33 @@ public class TestFragment extends Fragment implements GoogleApiClient.Connection
             Log.i(TAG, "Query completed. Received " + autocompletePredictions.getCount()
                     + " predictions.");
             String value = "";
+            Bitmap image = null;
             Iterator<AutocompletePrediction> iterator = autocompletePredictions.iterator();
-            ArrayList<PlaceAutocomplete> resultList = new ArrayList<>(autocompletePredictions.getCount());
+            resultList = new ArrayList<>(autocompletePredictions.getCount());
             while (iterator.hasNext()) {
+
                 AutocompletePrediction prediction = iterator.next();
+
+//                PlacePhotoMetadataBuffer photoMetadataBuffer = null;
+//                // Get a PlacePhotoMetadataResult containing metadata for the first 10 photos.
+//                PlacePhotoMetadataResult result = Places.GeoDataApi
+//                        .getPlacePhotos(mGoogleApiClient, prediction.getPlaceId()).await();
+//                // Get a PhotoMetadataBuffer instance containing a list of photos (PhotoMetadata).
+//                if (result != null && result.getStatus().isSuccess()) {
+//                    photoMetadataBuffer = result.getPhotoMetadata();
+//                }
+//                if (photoMetadataBuffer != null) {
+//                    // Get the first photo in the list.
+//                    PlacePhotoMetadata photo = photoMetadataBuffer.get(0);
+//                    // Get a full-size bitmap for the photo.
+//                    image = photo.getPhoto(mGoogleApiClient).await()
+//                            .getBitmap();
+//                }
+
+
+
                 resultList.add(new PlaceAutocomplete(prediction.getPlaceId(),
-                        prediction.getDescription()));
+                        prediction.getDescription(), image));
                 /*if (value.equals("")) {
                     value = prediction.getDescription();
                     PendingResult result =
